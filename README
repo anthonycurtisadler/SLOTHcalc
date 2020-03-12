@@ -1,0 +1,82 @@
+ SLOTHcalc
+                              PROGRAMMABLE CALCULATOR 
+
+               Slow
+               Ludic
+               Obscolete
+               Technology
+               Has its place
+
+
+                                  by
+                          Anthony Curtis Adler
+
+         OPERATORS = +,/,-,*,%(mod),^(power), ()
+         RELATIONS == != <= >= < >
+         FUNCTIONS abs,floor,fmod,frexp,gcd,remainder,
+         trunc,exp,expml,logn,logx,log1p,log2,log10,
+         power,sum,acos,asin,atan,atan2,cos,hypot,
+         sin,tan,degrees,radians,acost,asinh,atanh,cosh,
+         sing,tanh,erf,erfc,gamma,lgamma,neg
+
+         CONSTANTS pi, e, tau, inf, nan
+
+         NEWCALC:name  TO OPEN UP A NEW CALCULATOR
+         NEWPROGRAM:name TO WRITE A NEW PROGRAM
+
+         IN THE CALCULATOR MODE:
+
+              Any alphanumeric phrase can serve as a variable.
+              To return an entry from the log, type @line@.
+
+              ALL to show the log
+              
+        IN THE PROGRAMMABLE MODE:
+
+        SLOTH is basically a very basic basic.
+        COMMANDS INCLUDE:
+               PRINT expression
+               PRINTLINE expression
+               GOTO line#                  
+               WHILE conditionalexpression 
+               ENDWHILE
+               IFSKIP conditionalexpression /If TRUE, then skip the next line
+               END
+               IS                           /ALTERNATIVE FORM
+                                            /OF VARIABLE ASSIGNMENT
+                                            /YOU can also use '='
+        SPECIAL FUNCTIONS
+               inputfloat('PROMPT')
+               inputstring('PROMPT')
+        INTERPRETER OPERATION
+               line numbers can be entered explicitly or implicity
+               RUN to run a program for the first time.
+               RERUN to run again without reinterpreting
+               CLEAR to clear program
+               ALL to show program
+               CALC:name to return to calc mode
+               TRACE to show the trace stack
+               DELETE to delete a line
+
+         EXAMPLES
+
+         1) HELLO WORLD
+            10 PRINT 'HELLO WORLD'
+
+         2) CALCULATE FIBONACCI NUMBERS
+
+          10 PRINTLINE 'FIBONACCI'
+          20 LIMIT = inputfloat('LIMIT?')
+          30 OLD=0
+          40 NEW=1
+          50 COUNTER = 1
+          60 WHILE COUNTER<LIMIT
+          70 NEWER=OLD+NEW
+          80 OLD=NEW
+          90 NEW=NEWER
+          100 COUNTER=COUNTER+1
+          110 PRINT 'VALUE='
+          120 PRINTLINE NEW
+          130 ENDWHILE
+          140 PRINTLINE 'LIMIT'
+          150 PRINT LIMIT
