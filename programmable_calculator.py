@@ -64,18 +64,21 @@ class Program:
           self.logic = Logic(oracle = self)
           self.trace_stack = TraceStack()
           self.break_off = break_off
+          self.ccalc = self.calculator.calculate
 
      def contains (self,x):
 
           return x in self.variables.variables
 
      def get (self,x):
-          
+
+          """ Evaluates expressions that are either true or false"""
 
           COMPTERMS = ['==','>=','<=','!=','>','<',]
 
 
           def contains_comp (x):
+               """True is x contains any of the COMP Terms"""
 
                for comp in COMPTERMS:
                     if comp in x:
@@ -83,6 +86,8 @@ class Program:
                return False
 
           def comp_split (phrase):
+               """ Splits the phrase into a list of terms to be compared"""
+               
                level = 0
 
                phrase = list(phrase)
@@ -283,6 +288,9 @@ class Program:
 
 
                line = self.program_lines[line_counter]
+               if line:
+                    self.trace_stack.add('; '.join([str(x) for x in line if x]))
+               
 
                line_counter += 1
                command, value1, value2 = line[0], line[1], line[2]
@@ -745,6 +753,7 @@ class Calculator:
 
 
 
+
           self.operations = ['+','-','*','/','^','%']
               # basic operators in order of evaluation
           # functions imported from math
@@ -790,10 +799,12 @@ class Calculator:
                        'inputfloat':(flinput,1,1),
                        'list':(lambda x:ListType(x),1,100000000),
                        'contains':(lambda x,y:x.contains(y),2,2),
+                       'notcontains':(lambda x,y:not x.contains(y),2,2),
                        'slice':(lambda x,y,z:x.slices(int(y),int(z)),3,3),
                        'fetch':(lambda x,y:x.fetches(int(y)),2,2),
                        'append':(lambda x,y:x.appends(y),2,2),
-                       'len':(lambda x:len(x),1,1)}
+                       'len':(lambda x:len(x),1,1),
+                       'not':(lambda x:not x,1,1)}
                             
                
           if register is None:
@@ -924,6 +935,7 @@ SOFTWARE.
      def calculate (self,phrase):
 
 
+
           """Core routine for parsing and evaluating phrase"""
 
 
@@ -994,13 +1006,29 @@ SOFTWARE.
 
 
                for x in phrase:
-                    if (x not in self.operations and not (isinstance(x,(int,type(ListType()),float,bool)) or (isinstance(x,str) and quoted(x)))) or self.current_register.contains(x):
+                    if (x not in self.operations and not (isinstance(x,(int,type(ListType()),float,bool) or (isinstance(x,str) and quoted(x)))) or self.current_register.contains(x)):
                          return False
                return True
           
           def parse (phrase):
+
+          
+               COMPTERMS = ['==','>=','<=','!=','>','<',]
+
+
+               def contains_comp (x):
+                    """True is x contains any of the COMP Terms"""
+
+                    for comp in COMPTERMS:
+                         if comp in x:
+                              return True
+                    return False
+
+
               
                """Parses and analzes the phrase"""
+
+               
                if phrase in ['bTrue','bFalse','EmptyList']:
                          return {'bTrue':True,
                                  'bFalse':False,
@@ -1043,7 +1071,7 @@ SOFTWARE.
                               # A list of values 
                               func_phrase = func_phrase[1:-1]
                               return func([parse(x) for x in func_phrase.split(',')])
-                    elif phrase[0] == '-' and bracketed(phrase[1:]):
+                    elif phrase and phrase[0] == '-' and bracketed(phrase[1:]):
                          # Translates negative sign (as opposed to operators) into corresponding function 
                          return -parse(phrase[2:-1])
 
@@ -1057,6 +1085,8 @@ SOFTWARE.
                     elif self.current_register.contains(phrase):
                          # for variables and constants
                          return self.current_register.get(phrase)
+                    elif contains_comp(phrase) and '(' not in phrase and ')' not in phrase:
+                         return calc.computer.get(phrase)
                     elif phrase and phrase[0]=='@' and phrase[-1]=='@':
                          # to retrieve values from the log 
                          index = int(parse(phrase[1:-1]))
@@ -1184,8 +1214,9 @@ SOFTWARE.
                         phrase = [parse(x) for x in phrase]
                     return parse(phrase)
 
-               if isinstance(phrase,(int,float,type(ListType()))):
+               if isinstance(phrase,(int,float,type(ListType()),bool)):
                     # if a numerical value, stop the recursion
+                    
                     return phrase 
 
           return parse(phrase)
@@ -1250,7 +1281,8 @@ class Programmable(Calculator):
          
      def console (self):
 
-          # The console operating the calculator 
+          # The console operating the calculator
+          self.computer = Program()
 
           self.commands = {'ALL':self.show_all,
                            'CLEAR':self.clear}
@@ -1291,7 +1323,7 @@ class Programmable(Calculator):
 
 
                     if query.strip().split(':')[0] == 'RUN':
-                         self.computer = Program()
+
                          if ':' in query and query.strip().split(':')[1].isnumeric():
                               break_off = int(query.strip().split(':')[1])
                          else:
@@ -1427,11 +1459,16 @@ class Programmable(Calculator):
                                       # If not variable = subject 
                                    predicate = query
                                    subject = ''
-                              value = self.calculate(predicate)
-##                              try:
-##                                   value = self.calculate(predicate)
-##                              except:
-##                                   value = 'ERROR'
+                              
+                              try:
+                                   value = self.calculate(predicate)
+                                        
+                              except:
+                                   try:
+                                        value = self.computer.get(predicate)
+                                            # To evaluate comparative formulations
+                                   except:
+                                        value = 'ERROR'
                               if subject:
                                      # if a variable has been given, define its value 
                                    if value != 'ERROR':
