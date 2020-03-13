@@ -4,6 +4,7 @@
 import math
 from stack import Stack
 
+
 class TraceStack(Stack):
 
      def __init__(self):
@@ -53,8 +54,7 @@ class Register:
 
 class Program:
 
-     def __init__ (self):
-
+     def __init__ (self,break_off=10000):
           self.program_lines = []
           self.line_directory = {}
           self.program_blocks = {}
@@ -63,6 +63,7 @@ class Program:
           self.calculator = Calculator(register=self.variables)
           self.logic = Logic(oracle = self)
           self.trace_stack = TraceStack()
+          self.break_off = break_off
 
      def contains (self,x):
 
@@ -72,7 +73,7 @@ class Program:
           
 
           COMPTERMS = ['==','>=','<=','!=','>','<',]
-     
+
 
           def contains_comp (x):
 
@@ -143,6 +144,7 @@ class Program:
                          return False
                return True
 
+
           if x in self.variables.variables:
                val = self.variables.variables[x]
 
@@ -162,7 +164,20 @@ class Program:
                               if not phr:
                                    return False
                               return True
-               return None
+               elif x in ['True','False','bTrue','bFalse']:
+                    return {'True':True,
+                            'False':False,
+                            'bTrue':True,
+                            'bFalse':False}[x]
+     
+               else:
+                    x=self.calculator.calculate(x)
+                    if not x:
+                         
+                         return False
+                    return True
+ 
+                    
                     
                
                
@@ -247,97 +262,112 @@ class Program:
 
      def run (self):
 
+          def xprint (x,end=''):
+
+               if isinstance(x,float):
+                    try:
+                         print(int(x),end=end)
+                    except:
+                         print(x,end=end)
+               else:
+                    print(x,end=end)
+
 
           self.trace_stack = TraceStack()
           line_counter = 0
+          iteration_counter = 0
 
-          try:
-          
-          
-               while line_counter < len(self.program_lines):
 
-                    try:
+          while (self.break_off==0 or iteration_counter<self.break_off) and line_counter < len(self.program_lines):
+               iteration_counter+=1
 
-                    
 
-                         line = self.program_lines[line_counter]
+               line = self.program_lines[line_counter]
 
-                         line_counter += 1
-                         command, value1, value2 = line[0], line[1], line[2]
-                         if not value1 is None:
-                              if value2 is None:
-                                   terms = 1
-                              else: terms = 2
-                         else:
-                              terms = 0
-                         if value1 == '=':
-                              command = command + value1 + value2
-                         if '=' in command:
+               line_counter += 1
+               command, value1, value2 = line[0], line[1], line[2]
+               if not value1 is None:
+                    if value2 is None:
+                         terms = 1
+                    else: terms = 2
+               else:
+                    terms = 0
+               if value1 == '=':
+                    command = command + value1 + value2
+               if '=' in command:
 
-                              subject = command.split('=')[0]
-                              predicate = self.calculator.calculate(command.split('=')[1])
-                              self.variables.set(subject,predicate)
-                         
-
-                         elif command in ['IS',
-                                        'GOTO',
-                                        'WHILE',
-                                        'ENDWHILE',
-                                        'PRINT',
-                                        'IFSKIP',
-                                        'PRINTLINE']:
-                              def debracket (x):
-                                   if isinstance(x,str):
-                                        if x[0]+x[-1] in ['""',"''"]:
-                                             return x[1:-1]
-                                   return x
-                              if command == 'IS' and terms == 2:
-
-                                   self.variables.set(value1,self.calculator.calculate(value2))
-                                   self.trace_stack.add(str(line_counter)+' IS:'+value1)
-                                   
-                              elif command == 'GOTO':
-                                   line_counter = self.line_directory[int(value1)]
-                                   self.trace_stack.add(str(line_counter)+' GOTO:'+value1+'/'+str(line_counter))
-                                   
-                              elif command == 'WHILE':
-
-                                   if not self.get(value1):
-                                        line_counter = self.reverse_blocks[line_counter-1]+1
-                                        self.trace_stack.add(str(line_counter)+' TERMINATES WHILE')
-                                        self.trace_stack.add(str(line_counter)+' GOTO '+str(line_counter))
-                                   self.trace_stack.add(str(line_counter)+' WHILE CONTINUES')
-                              elif command == 'ENDWHILE':
-                                   line_counter = self.program_blocks[line_counter-1]
-                                   self.trace_stack.add(str(line_counter)+' WHILE RETURN')
-                                   self.trace_stack.add(str(line_counter)+' GOTO '+str(line_counter))
-                                   
-                              elif command == 'IFSKIP':
-                                   if self.get(value1):
-                                        line_counter += 1
-                                        self.trace_stack.add(str(line_counter)+' IFSKIP TRUE')
-                                   self.trace_stack.add(str(line_counter)+' IFSKIP FALSE')
-                              elif command == 'PRINTLINE':
-                                   print(debracket(self.calculator.calculate(value1)),end='\n')
-                                   self.trace_stack.add(str(line_counter)+' PRINTLINE ')
-                              elif command == 'PRINT':
-                                   print(debracket(self.calculator.calculate(value1)),end='')
-                                   self.trace_stack.add(str(line_counter)+' PRINT ')
-                              elif command == 'END':
-                                   self.trace_stack.add(str(line_counter)+' PROGRAM TERMINATED')
-                                   break
-
-                    except:
-                         self.trace_stack.add(str(line_counter)+' LINE EXCEPTION')
-
-          except:
-               self.trace_stack.add(str(line_counter)+' PROGRAM EXCEPTION')
+                    subject = command.split('=')[0]
+                    predicate = self.calculator.calculate(command.split('=')[1])
+                    self.variables.set(subject,predicate)
                
-     def interpret (self,x):
+
+               elif command in ['IS',
+                              'GOTO',
+                              'WHILE',
+                              'ENDWHILE',
+                              'PRINT',
+                              'IFSKIP',
+                              'PRINTLINE']:
+                    def debracket (x):
+                         if isinstance(x,str):
+                              if x[0]+x[-1] in ['""',"''"]:
+                                   return x[1:-1]
+                         return x
+                    if command == 'IS' and terms == 2:
+
+                         self.variables.set(value1,self.calculator.calculate(value2))
+                         self.trace_stack.add(str(line_counter)+' IS:'+value1)
+                         
+                    elif command == 'GOTO':
+                         line_counter = self.line_directory[int(value1)]
+                         self.trace_stack.add(str(line_counter)+' GOTO:'+value1+'/'+str(line_counter))
+                         
+                    elif command == 'WHILE':
+
+
+                         if not self.get(value1):
+                              line_counter = self.reverse_blocks[line_counter-1]+1
+                              self.trace_stack.add(str(line_counter)+' TERMINATES WHILE')
+                              self.trace_stack.add(str(line_counter)+' GOTO '+str(line_counter))
+                         self.trace_stack.add(str(line_counter)+' WHILE CONTINUES')
+                    elif command == 'ENDWHILE':
+                         line_counter = self.program_blocks[line_counter-1]
+                         self.trace_stack.add(str(line_counter)+' WHILE RETURN')
+                         self.trace_stack.add(str(line_counter)+' GOTO '+str(line_counter))
+                         
+                    elif command == 'IFSKIP':
+                         if self.get(value1):
+                              if value2 is None:
+                                   value2 = 1
+                              else:
+                                   value2 = self.calculator.calculate(int(value2))
+                              line_counter += value2
+                              self.trace_stack.add(str(line_counter)+' IFSKIP TRUE SKIPPING'+str(value2))
+                         self.trace_stack.add(str(line_counter)+' IFSKIP FALSE')
+                    
+                    elif command == 'PRINTLINE':
+                         xprint(debracket(self.calculator.calculate(value1)),end='\n')
+                         self.trace_stack.add(str(line_counter)+' PRINTLINE ')
+                    elif command == 'PRINT':
+                         xprint(debracket(self.calculator.calculate(value1)),end='')
+                         self.trace_stack.add(str(line_counter)+' PRINT ')
+                    elif command == 'END':
+                         self.trace_stack.add(str(line_counter)+' PROGRAM TERMINATED')
+                         break
+
+##                    except:
+##                         print('EXCEPT')
+##                         self.trace_stack.add(str(line_counter)+' LINE EXCEPTION')
+##                         line_counter += 1
+##
+##          except:
+##               self.trace_stack.add(str(line_counter)+' PROGRAM EXCEPTION')
+               
+     def interpret (self,x=None,break_off=10000):
 
 
 
-          self.__init__()
+          self.__init__(break_off=break_off)
           self.load(x)
           self.find_blocks()
           self.run()
@@ -666,11 +696,32 @@ class Logic:
                
           
 
+class ListType:
 
-          
+     def __init__ (self,x=None):
+          if x is None:
+               self.list = []
 
+          else:
+               self.list = list(x)
+     def appends(self,x):
+          self.list.append(x)
+          return self.list
+     def contains(self,x):
+          return x  in self.list
+     def slices(self,x,y):
+          return ListType(self.list[x:y])
+     def fetches(self,x):
+          return self.list[x]
+     def __str__ (self):
+          return ('['+', '.join([str(x) for x in self.list])+']')
+
+     def __add__ (self,other):
+          return ListType(self.list + other.list)
+
+     def __len__ (self):
+          return len(self.list)
      
-
      
 
 
@@ -690,7 +741,8 @@ class Calculator:
                return float(input(debracket(x)))
           def sinput (x):
                return '"'+str(input(debracket(x)))+'"'
-          
+
+
 
 
           self.operations = ['+','-','*','/','^','%']
@@ -735,7 +787,15 @@ class Calculator:
                        'lgamma':(math.lgamma,1,1),
                        'neg':(lambda x:-x,1,1),
                        'inputstring':(sinput,1,1),
-                       'inputfloat':(flinput,1,1)}
+                       'inputfloat':(flinput,1,1),
+                       'list':(lambda x:ListType(x),1,100000000),
+                       'contains':(lambda x,y:x.contains(y),2,2),
+                       'slice':(lambda x,y,z:x.slices(int(y),int(z)),3,3),
+                       'fetch':(lambda x,y:x.fetches(int(y)),2,2),
+                       'append':(lambda x,y:x.appends(y),2,2),
+                       'len':(lambda x:len(x),1,1)}
+                            
+               
           if register is None:
                self.current_register = Register()
           else:
@@ -763,10 +823,14 @@ class Calculator:
          sin,tan,degrees,radians,acost,asinh,atanh,cosh,
          sing,tanh,erf,erfc,gamma,lgamma,neg
 
-         CONSTANTS pi, e, tau, inf, nan
+         CONSTANTS pi, e, tau, inf, nan, True, False,
+         bTrue, bFalse (When entered as a string)
+         
 
          NEWCALC:name  TO OPEN UP A NEW CALCULATOR
          NEWPROGRAM:name TO WRITE A NEW PROGRAM
+         (The name 'main' is reserved for the default calculator)
+         
 
          IN THE CALCULATOR MODE:
 
@@ -792,20 +856,21 @@ class Calculator:
         SPECIAL FUNCTIONS
                inputfloat('PROMPT')
                inputstring('PROMPT')
-        INTERPRETER OPERATION
+        ENVIRONMENT COMMANDS 
                line numbers can be entered explicitly or implicity
-               RUN to run a program for the first time.
+               RUN:iterations  to run a program for the first time.
+                              /0 iterations for NO LIMIT
                RERUN to run again without reinterpreting
                CLEAR to clear program
                ALL to show program
                CALC:name to return to calc mode
                TRACE to show the trace stack
-               DELETE to delete a line
+               DELETE:line to delete a line
 
          EXAMPLES
 
          1) HELLO WORLD
-            10 PRINT 'HELLO WORLD'
+            10 PRINT 'HELLO WORLD
 
          2) CALCULATE FIBONACCI NUMBERS
 
@@ -857,6 +922,7 @@ SOFTWARE.
 
 
      def calculate (self,phrase):
+
 
           """Core routine for parsing and evaluating phrase"""
 
@@ -928,15 +994,20 @@ SOFTWARE.
 
 
                for x in phrase:
-                    if (x not in self.operations and not (isinstance(x,(int,float,bool)) or (isinstance(x,str) and quoted(x)))) or self.current_register.contains(x):
+                    if (x not in self.operations and not (isinstance(x,(int,type(ListType()),float,bool)) or (isinstance(x,str) and quoted(x)))) or self.current_register.contains(x):
                          return False
                return True
           
           def parse (phrase):
-
+              
                """Parses and analzes the phrase"""
+               if phrase in ['bTrue','bFalse','EmptyList']:
+                         return {'bTrue':True,
+                                 'bFalse':False,
+                                 'EmptyList':ListType()}[phrase]
 
                if isinstance(phrase,str):
+                    
                     if quoted(phrase):
                          return phrase
                     else:
@@ -963,7 +1034,12 @@ SOFTWARE.
                               func_phrase = func_phrase[1:-1]
                               term1,term2 = func_phrase.split(',')[0],func_phrase.split(',')[1]
                               return func(parse(term1),parse(term2))
-                         if iarity > 2:
+                         if iarity == 3:
+                              func_phrase = func_phrase[1:-1]
+                              term1,term2, term3 = func_phrase.split(',')[0],func_phrase.split(',')[1],func_phrase.split(',')[2]
+                              return func(parse(term1),parse(term2),parse(term3))
+                         
+                         if iarity >3:
                               # A list of values 
                               func_phrase = func_phrase[1:-1]
                               return func([parse(x) for x in func_phrase.split(',')])
@@ -1102,16 +1178,13 @@ SOFTWARE.
                                    
                                    phrase = newlist
 
-
-
-                                   
-                         
+                        
                     else:
                         # if the list is not yet simple, return a new list after parsing each element.
                         phrase = [parse(x) for x in phrase]
                     return parse(phrase)
 
-               if isinstance(phrase,(int,float)):
+               if isinstance(phrase,(int,float,type(ListType()))):
                     # if a numerical value, stop the recursion
                     return phrase 
 
@@ -1169,6 +1242,7 @@ SOFTWARE.
           self.show_counter = 0
           self.programming = True 
           self.entered_lines = {int(x.split(']')) for x in self.lines if x[0].split('[')[0].isnumeric()}
+
 class Programmable(Calculator):
 
      
@@ -1216,11 +1290,17 @@ class Programmable(Calculator):
                     query = input(self.scriptname+'[')
 
 
-                    if query.strip() == 'RUN':
+                    if query.strip().split(':')[0] == 'RUN':
                          self.computer = Program()
+                         if ':' in query and query.strip().split(':')[1].isnumeric():
+                              break_off = int(query.strip().split(':')[1])
+                         else:
+                              break_off = 10000
+                              
+                              
                          script = '\n'.join(x[0] for x in self.lines)
                          
-                         self.computer.interpret(script)
+                         self.computer.interpret(script,break_off=break_off)
                          print()
                                              
                     elif query.strip() == 'RERUN':
@@ -1337,22 +1417,24 @@ class Programmable(Calculator):
                                    query = str(self.lines[self.counter-1][1])+query
                                       # if no initial value, perform operation on previous value
 
-
-                              if '=' in query:
+                              
+                              if ('=' in query and '==' not in query) or ('==' in query and '=' in query.split('==')[0]):
                                       # To define a variable (=subject)
-                                   subject, predicate = query.split('=')
+                                   subject, predicate = query.split('=')[0],'='.join(query.split('=')[1:])
                                    subject = subject.strip()
+
                               else:
                                       # If not variable = subject 
                                    predicate = query
                                    subject = ''
-                              try:
-                                   value = self.calculate(predicate)
-                              except:
-                                   value = 'ERROR'
+                              value = self.calculate(predicate)
+##                              try:
+##                                   value = self.calculate(predicate)
+##                              except:
+##                                   value = 'ERROR'
                               if subject:
                                      # if a variable has been given, define its value 
-                                   if not isinstance(value,str):
+                                   if value != 'ERROR':
                                         # to make sure that an ERROR message is not recorded as a value 
                                         self.current_register.set(subject,value)
                               else:
@@ -1366,7 +1448,7 @@ class Programmable(Calculator):
                          else:
                               if self.show_counter < len(self.lines)-1:
                                    self.show_counter+=1
-                              print (self.self.show_counter,':',
+                              print (self.show_counter,':',
                                      str(self.lines[self.show_counter][1])
                                      +(20-len(str(self.lines[self.show_counter][1])))*' ',
                                      '|',self.lines[self.show_counter][0])
